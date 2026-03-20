@@ -19,7 +19,10 @@ interface Props {
   conversationError: Error | null;
   conversation: Models.DirectMessageConversation;
   activeUser: Models.User;
+  hasMoreBefore: boolean;
+  isLoadingOlder: boolean;
   isPeerTyping: boolean;
+  onLoadOlder: () => void;
   isSubmitting: boolean;
   onTyping: () => void;
   onSubmit: (params: DirectMessageFormData) => Promise<void>;
@@ -29,7 +32,10 @@ export const DirectMessagePage = ({
   conversationError,
   conversation,
   activeUser,
+  hasMoreBefore,
+  isLoadingOlder,
   isPeerTyping,
+  onLoadOlder,
   isSubmitting,
   onTyping,
   onSubmit,
@@ -37,6 +43,8 @@ export const DirectMessagePage = ({
   const formRef = useRef<HTMLFormElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const textAreaId = useId();
+  const previousLastMessageIdRef = useRef<string | null>(null);
+  const previousScrollHeightRef = useRef<number | null>(null);
 
   const peer =
     conversation.initiator.id !== activeUser.id ? conversation.initiator : conversation.member;
@@ -78,8 +86,27 @@ export const DirectMessagePage = ({
     if (messagesElement == null) {
       return;
     }
-    messagesElement.scrollTop = messagesElement.scrollHeight;
-  }, [conversation.messages.length, isPeerTyping]);
+
+    const lastMessageId = conversation.messages[conversation.messages.length - 1]?.id ?? null;
+    const didAppendNewMessage = previousLastMessageIdRef.current !== lastMessageId;
+
+    if (previousScrollHeightRef.current !== null) {
+      messagesElement.scrollTop += messagesElement.scrollHeight - previousScrollHeightRef.current;
+      previousScrollHeightRef.current = null;
+    } else if (didAppendNewMessage || isPeerTyping) {
+      messagesElement.scrollTop = messagesElement.scrollHeight;
+    }
+
+    previousLastMessageIdRef.current = lastMessageId;
+  }, [conversation.messages, isPeerTyping]);
+
+  const handleLoadOlder = useCallback(() => {
+    const messagesElement = messagesRef.current;
+    if (messagesElement != null) {
+      previousScrollHeightRef.current = messagesElement.scrollHeight;
+    }
+    onLoadOlder();
+  }, [onLoadOlder]);
 
   if (conversationError != null) {
     return (
@@ -111,6 +138,19 @@ export const DirectMessagePage = ({
         className="bg-cax-surface-subtle flex-1 space-y-4 overflow-y-auto px-4 pt-4 pb-8"
         ref={messagesRef}
       >
+        {hasMoreBefore && (
+          <div className="flex justify-center">
+            <button
+              className="border-cax-border bg-cax-surface text-cax-text hover:bg-cax-surface-subtle rounded-full border px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isLoadingOlder}
+              onClick={handleLoadOlder}
+              type="button"
+            >
+              {isLoadingOlder ? "読込中..." : "以前のメッセージを表示"}
+            </button>
+          </div>
+        )}
+
         {conversation.messages.length === 0 && (
           <p className="text-cax-text-muted text-center text-sm">
             まだメッセージはありません。最初のメッセージを送信してみましょう。
@@ -128,6 +168,10 @@ export const DirectMessagePage = ({
                   "flex flex-col w-full",
                   isActiveUserSend ? "items-end" : "items-start",
                 )}
+                style={{
+                  containIntrinsicSize: "auto 4rem",
+                  contentVisibility: "auto",
+                }}
               >
                 <p
                   className={classNames(

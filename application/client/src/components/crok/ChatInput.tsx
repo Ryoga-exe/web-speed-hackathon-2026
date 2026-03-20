@@ -1,5 +1,6 @@
 import kuromoji, { type Tokenizer, type IpadicFeatures } from "kuromoji";
 import {
+  useDeferredValue,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -20,6 +21,8 @@ interface Props {
   isStreaming: boolean;
   onSendMessage: (message: string) => void;
 }
+const MIN_SUGGEST_QUERY_LENGTH = 2;
+const SUGGESTION_DEBOUNCE_MS = 180;
 
 function buildTokenizer() {
   return new Promise<Tokenizer<IpadicFeatures>>((resolve, reject) => {
@@ -91,10 +94,12 @@ export const ChatInput = ({ isStreaming, onSendMessage }: Props) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const [tokenizer, setTokenizer] = useState<Tokenizer<IpadicFeatures> | null>(null);
+  const [candidates, setCandidates] = useState<string[] | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [queryTokens, setQueryTokens] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const deferredInputValue = useDeferredValue(inputValue);
 
   // サジェストが更新されたら一番下にスクロール
   useLayoutEffect(() => {
@@ -103,47 +108,50 @@ export const ChatInput = ({ isStreaming, onSendMessage }: Props) => {
     }
   }, [suggestions, showSuggestions]);
 
-  // 初回にkuromojiトークナイザーを構築
-  useEffect(() => {
-    let mounted = true;
-
-    const init = async () => {
-      const nextTokenizer = await buildTokenizer();
-      if (mounted) {
-        setTokenizer(nextTokenizer);
-      }
-    };
-    init();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
+    const normalizedInput = deferredInputValue.trim();
 
     const updateSuggestions = async () => {
-      if (!tokenizer || !inputValue.trim()) {
+      if (isStreaming || normalizedInput.length < MIN_SUGGEST_QUERY_LENGTH) {
         setSuggestions([]);
         setQueryTokens([]);
         setShowSuggestions(false);
         return;
       }
 
-      const { suggestions: candidates } = await fetchJSON<{ suggestions: string[] }>(
-        "/api/v1/crok/suggestions",
-      );
+      await new Promise((resolve) => {
+        const timeoutId = setTimeout(resolve, SUGGESTION_DEBOUNCE_MS);
+        if (cancelled) {
+          clearTimeout(timeoutId);
+        }
+      });
       if (cancelled) {
         return;
       }
 
-      const tokens = extractTokens(tokenizer.tokenize(inputValue));
-      const results = filterSuggestionsBM25(tokenizer, candidates, tokens);
+      const [nextTokenizer, nextCandidates] = await Promise.all([
+        tokenizer ?? buildTokenizer(),
+        candidates != null
+          ? Promise.resolve(candidates)
+          : fetchJSON<{ suggestions: string[] }>("/api/v1/crok/suggestions").then(
+              (response) => response.suggestions,
+            ),
+      ]);
 
       if (cancelled) {
         return;
       }
+
+      if (tokenizer == null) {
+        setTokenizer(nextTokenizer);
+      }
+      if (candidates == null) {
+        setCandidates(nextCandidates);
+      }
+
+      const tokens = extractTokens(nextTokenizer.tokenize(normalizedInput));
+      const results = filterSuggestionsBM25(nextTokenizer, nextCandidates, tokens);
 
       setQueryTokens(tokens);
       setSuggestions(results);
@@ -155,7 +163,7 @@ export const ChatInput = ({ isStreaming, onSendMessage }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [inputValue, tokenizer]);
+  }, [candidates, deferredInputValue, isStreaming, tokenizer]);
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;

@@ -19,6 +19,11 @@ interface DmTypingEvent {
 }
 
 const TYPING_INDICATOR_DURATION_MS = 10 * 1000;
+const DIRECT_MESSAGE_PAGE_LIMIT = 50;
+
+interface DirectMessageConversationPayload extends Models.DirectMessageConversation {
+  hasMoreBefore: boolean;
+}
 
 interface Props {
   activeUser: Models.User | null;
@@ -29,28 +34,71 @@ export const DirectMessageContainer = ({ activeUser, authModalId }: Props) => {
   const { conversationId = "" } = useParams<{ conversationId: string }>();
 
   const [conversation, setConversation] = useState<Models.DirectMessageConversation | null>(null);
+  const [hasMoreBefore, setHasMoreBefore] = useState(false);
   const [conversationError, setConversationError] = useState<Error | null>(null);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [isPeerTyping, setIsPeerTyping] = useState(false);
   const peerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadConversation = useCallback(async () => {
+  const loadConversation = useCallback(async ({ before, prepend = false }: { before?: string; prepend?: boolean } = {}) => {
     if (activeUser == null) {
       return;
     }
 
     try {
-      const data = await fetchJSON<Models.DirectMessageConversation>(
-        `/api/v1/dm/${conversationId}`,
+      const params = new URLSearchParams({
+        limit: String(DIRECT_MESSAGE_PAGE_LIMIT),
+      });
+      if (before != null) {
+        params.set("before", before);
+      }
+
+      const data = await fetchJSON<DirectMessageConversationPayload>(
+        `/api/v1/dm/${conversationId}?${params.toString()}`,
       );
-      setConversation(data);
+      setConversation((current) => {
+        if (!prepend || current == null) {
+          return data;
+        }
+
+        const currentIds = new Set(current.messages.map((message) => message.id));
+        return {
+          ...data,
+          messages: [
+            ...data.messages.filter((message) => !currentIds.has(message.id)),
+            ...current.messages,
+          ],
+        };
+      });
+      setHasMoreBefore(data.hasMoreBefore);
       setConversationError(null);
     } catch (error) {
-      setConversation(null);
+      if (!prepend) {
+        setConversation(null);
+      }
       setConversationError(error as Error);
+    } finally {
+      if (prepend) {
+        setIsLoadingOlder(false);
+      }
     }
   }, [activeUser, conversationId]);
+
+  const handleLoadOlder = useCallback(async () => {
+    if (conversation == null || isLoadingOlder) {
+      return;
+    }
+
+    const oldestMessage = conversation.messages[0];
+    if (oldestMessage == null) {
+      return;
+    }
+
+    setIsLoadingOlder(true);
+    await loadConversation({ before: oldestMessage.createdAt, prepend: true });
+  }, [conversation, isLoadingOlder, loadConversation]);
 
   const sendRead = useCallback(async () => {
     if (activeUser == null) {
@@ -154,7 +202,10 @@ export const DirectMessageContainer = ({ activeUser, authModalId }: Props) => {
         conversationError={conversationError}
         conversation={conversation}
         activeUser={activeUser}
+        hasMoreBefore={hasMoreBefore}
+        isLoadingOlder={isLoadingOlder}
         onTyping={handleTyping}
+        onLoadOlder={handleLoadOlder}
         isPeerTyping={isPeerTyping}
         isSubmitting={isSubmitting}
         onSubmit={handleSubmit}

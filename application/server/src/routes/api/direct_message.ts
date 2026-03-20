@@ -10,6 +10,7 @@ import {
 } from "@web-speed-hackathon-2026/server/src/models";
 
 export const directMessageRouter = Router();
+const DIRECT_MESSAGE_PAGE_LIMIT = 50;
 
 directMessageRouter.get("/dm", async (req, res) => {
   if (req.session.userId === undefined) {
@@ -150,17 +151,62 @@ directMessageRouter.get("/dm/:conversationId", async (req, res) => {
 
   res.setHeader("Cache-Control", "no-store");
 
-  const conversation = await DirectMessageConversation.findOne({
+  const conversation = await DirectMessageConversation.unscoped().findOne({
     where: {
       id: req.params.conversationId,
       [Op.or]: [{ initiatorId: req.session.userId }, { memberId: req.session.userId }],
     },
+    include: [
+      { association: "initiator", include: [{ association: "profileImage" }] },
+      { association: "member", include: [{ association: "profileImage" }] },
+    ],
   });
   if (conversation === null) {
     throw new httpErrors.NotFound();
   }
 
-  return res.status(200).type("application/json").send(conversation);
+  const limit =
+    typeof req.query["limit"] === "string" && Number.isFinite(Number(req.query["limit"]))
+      ? Math.max(1, Math.min(Number(req.query["limit"]), DIRECT_MESSAGE_PAGE_LIMIT))
+      : DIRECT_MESSAGE_PAGE_LIMIT;
+  const before =
+    typeof req.query["before"] === "string" && req.query["before"] !== ""
+      ? new Date(req.query["before"])
+      : null;
+
+  const beforeWhere =
+    before != null && !Number.isNaN(before.getTime()) ? { createdAt: { [Op.lt]: before } } : {};
+
+  const messages = await DirectMessage.unscoped().findAll({
+    where: {
+      conversationId: conversation.id,
+      ...beforeWhere,
+    },
+    include: [{ association: "sender", include: [{ association: "profileImage" }] }],
+    limit,
+    order: [["createdAt", "DESC"]],
+  });
+
+  const orderedMessages = [...messages].reverse();
+  const oldestMessage = orderedMessages[0];
+  const hasMoreBefore =
+    oldestMessage != null
+      ? (await DirectMessage.count({
+          where: {
+            conversationId: conversation.id,
+            createdAt: { [Op.lt]: oldestMessage.createdAt },
+          },
+        })) > 0
+      : false;
+
+  return res
+    .status(200)
+    .type("application/json")
+    .send({
+      ...conversation.toJSON(),
+      hasMoreBefore,
+      messages: orderedMessages,
+    });
 });
 
 directMessageRouter.ws("/dm/:conversationId", async (req, _res) => {
