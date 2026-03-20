@@ -1,6 +1,5 @@
 import { BM25 } from "bayesian-bm25";
 import type { Tokenizer, IpadicFeatures } from "kuromoji";
-import _ from "lodash";
 
 const STOP_POS = new Set(["助詞", "助動詞", "記号"]);
 
@@ -28,15 +27,15 @@ export function filterSuggestionsBM25(
   const tokenizedCandidates = candidates.map((c) => extractTokens(tokenizer.tokenize(c)));
   bm25.index(tokenizedCandidates);
 
-  const results = _.zipWith(candidates, bm25.getScores(queryTokens), (text, score) => {
-    return { text, score };
-  });
+  const scores = bm25.getScores(queryTokens);
 
-  // スコアが高い（＝類似度が高い）ものが下に来るように、上位10件を取得する
-  return _(results)
-    .filter((s) => s.score > 0)
-    .sortBy(["score"])
-    .slice(-10)
-    .map((s) => s.text)
-    .value();
+  return candidates
+    .map((text, index) => ({
+      text,
+      score: scores[index] ?? 0,
+    }))
+    .filter((result) => result.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10)
+    .map((result) => result.text);
 }

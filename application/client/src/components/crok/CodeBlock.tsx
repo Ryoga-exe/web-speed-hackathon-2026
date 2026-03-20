@@ -1,14 +1,50 @@
 import { ComponentProps, isValidElement, ReactElement, ReactNode } from "react";
-import SyntaxHighlighter from "react-syntax-highlighter";
+import SyntaxHighlighter from "react-syntax-highlighter/dist/esm/light";
+import bash from "react-syntax-highlighter/dist/esm/languages/hljs/bash";
+import json from "react-syntax-highlighter/dist/esm/languages/hljs/json";
+import plaintext from "react-syntax-highlighter/dist/esm/languages/hljs/plaintext";
+import python from "react-syntax-highlighter/dist/esm/languages/hljs/python";
+import rust from "react-syntax-highlighter/dist/esm/languages/hljs/rust";
+import sql from "react-syntax-highlighter/dist/esm/languages/hljs/sql";
+import typescript from "react-syntax-highlighter/dist/esm/languages/hljs/typescript";
 import { atomOneLight } from "react-syntax-highlighter/dist/esm/styles/hljs";
+
+SyntaxHighlighter.registerLanguage("bash", bash);
+SyntaxHighlighter.registerLanguage("json", json);
+SyntaxHighlighter.registerLanguage("plaintext", plaintext);
+SyntaxHighlighter.registerLanguage("python", python);
+SyntaxHighlighter.registerLanguage("rust", rust);
+SyntaxHighlighter.registerLanguage("sql", sql);
+SyntaxHighlighter.registerLanguage("typescript", typescript);
+
+const LANGUAGE_ALIASES: Record<string, string> = {
+  js: "typescript",
+  json: "json",
+  mermaid: "plaintext",
+  py: "python",
+  python: "python",
+  rs: "rust",
+  rust: "rust",
+  sh: "bash",
+  shell: "bash",
+  sql: "sql",
+  text: "plaintext",
+  ts: "typescript",
+  tsx: "typescript",
+  txt: "plaintext",
+  typescript: "typescript",
+  zsh: "bash",
+};
 
 const getLanguage = (children: ReactElement<ComponentProps<"code">>) => {
   const className = children.props.className;
-  if (typeof className === "string") {
-    const match = className.match(/language-(\w+)/);
-    return match?.[1] ?? "javascript";
+  if (typeof className !== "string") {
+    return "plaintext";
   }
-  return "javascript";
+
+  const match = className.match(/language-([\w-]+)/);
+  const language = match?.[1]?.toLowerCase();
+  return (language && LANGUAGE_ALIASES[language]) ?? "plaintext";
 };
 
 const isCodeElement = (children: ReactNode): children is ReactElement<ComponentProps<"code">> =>

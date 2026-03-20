@@ -1,7 +1,5 @@
 import { useCallback, useState } from "react";
 
-import { createTranslator } from "@web-speed-hackathon-2026/client/src/utils/create_translator";
-
 type State =
   | { type: "idle"; text: string }
   | { type: "loading" }
@@ -19,8 +17,13 @@ export const TranslatableText = ({ text }: Props) => {
       case "idle": {
         (async () => {
           updateState({ type: "loading" });
+          let translator: { translate(text: string): Promise<string>; [Symbol.dispose](): void } | null =
+            null;
           try {
-            using translator = await createTranslator({
+            const { createTranslator } = await import(
+              /* webpackChunkName: "feature-translate" */ "@web-speed-hackathon-2026/client/src/utils/create_translator"
+            );
+            translator = await createTranslator({
               sourceLanguage: "ja",
               targetLanguage: "en",
             });
@@ -37,6 +40,8 @@ export const TranslatableText = ({ text }: Props) => {
               text: "翻訳に失敗しました",
               original: state.text,
             });
+          } finally {
+            translator?.[Symbol.dispose]();
           }
         })();
         break;
@@ -46,7 +51,6 @@ export const TranslatableText = ({ text }: Props) => {
         break;
       }
       default: {
-        state.type satisfies "loading";
         break;
       }
     }

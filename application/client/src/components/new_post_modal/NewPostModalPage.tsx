@@ -1,15 +1,61 @@
-import { MagickFormat } from "@imagemagick/magick-wasm";
 import { ChangeEventHandler, FormEventHandler, useCallback, useState } from "react";
 
 import { FontAwesomeIcon } from "@web-speed-hackathon-2026/client/src/components/foundation/FontAwesomeIcon";
 import { ModalErrorMessage } from "@web-speed-hackathon-2026/client/src/components/modal/ModalErrorMessage";
 import { ModalSubmitButton } from "@web-speed-hackathon-2026/client/src/components/modal/ModalSubmitButton";
 import { AttachFileInputButton } from "@web-speed-hackathon-2026/client/src/components/new_post_modal/AttachFileInputButton";
-import { convertImage } from "@web-speed-hackathon-2026/client/src/utils/convert_image";
-import { convertMovie } from "@web-speed-hackathon-2026/client/src/utils/convert_movie";
-import { convertSound } from "@web-speed-hackathon-2026/client/src/utils/convert_sound";
 
 const MAX_UPLOAD_BYTES_LIMIT = 10 * 1024 * 1024;
+
+let imageToolsPromise: Promise<{
+  convertImage: typeof import("@web-speed-hackathon-2026/client/src/utils/convert_image").convertImage;
+  MagickFormat: typeof import("@imagemagick/magick-wasm").MagickFormat;
+}> | null = null;
+
+let movieToolsPromise: Promise<{
+  convertMovie: typeof import("@web-speed-hackathon-2026/client/src/utils/convert_movie").convertMovie;
+}> | null = null;
+
+let soundToolsPromise: Promise<{
+  convertSound: typeof import("@web-speed-hackathon-2026/client/src/utils/convert_sound").convertSound;
+}> | null = null;
+
+function loadImageTools() {
+  if (imageToolsPromise === null) {
+    imageToolsPromise = Promise.all([
+      import(
+        /* webpackChunkName: "feature-image-tools" */ "@web-speed-hackathon-2026/client/src/utils/convert_image"
+      ),
+      import(/* webpackChunkName: "feature-image-tools" */ "@imagemagick/magick-wasm"),
+    ]).then(([imageModule, magickModule]) => ({
+      convertImage: imageModule.convertImage,
+      MagickFormat: magickModule.MagickFormat,
+    }));
+  }
+  return imageToolsPromise;
+}
+
+function loadMovieTools() {
+  if (movieToolsPromise === null) {
+    movieToolsPromise = import(
+      /* webpackChunkName: "feature-movie-tools" */ "@web-speed-hackathon-2026/client/src/utils/convert_movie"
+    ).then((movieModule) => ({
+      convertMovie: movieModule.convertMovie,
+    }));
+  }
+  return movieToolsPromise;
+}
+
+function loadSoundTools() {
+  if (soundToolsPromise === null) {
+    soundToolsPromise = import(
+      /* webpackChunkName: "feature-sound-tools" */ "@web-speed-hackathon-2026/client/src/utils/convert_sound"
+    ).then((soundModule) => ({
+      convertSound: soundModule.convertSound,
+    }));
+  }
+  return soundToolsPromise;
+}
 
 interface SubmitParams {
   images: File[];
@@ -52,25 +98,29 @@ export const NewPostModalPage = ({ id, hasError, isLoading, onResetError, onSubm
     setHasFileError(isValid !== true);
     if (isValid) {
       setIsConverting(true);
+      void (async () => {
+        try {
+          const { convertImage, MagickFormat } = await loadImageTools();
+          const convertedFiles = await Promise.all(
+            files.map((file) =>
+              convertImage(file, { extension: MagickFormat.Jpg }).then(
+                (blob) => new File([blob], "converted.jpg", { type: "image/jpeg" }),
+              ),
+            ),
+          );
 
-      Promise.all(
-        files.map((file) =>
-          convertImage(file, { extension: MagickFormat.Jpg }).then(
-            (blob) => new File([blob], "converted.jpg", { type: "image/jpeg" }),
-          ),
-        ),
-      )
-        .then((convertedFiles) => {
           setParams((params) => ({
             ...params,
             images: convertedFiles,
             movie: undefined,
             sound: undefined,
           }));
-
+        } catch (error) {
+          console.error(error);
+        } finally {
           setIsConverting(false);
-        })
-        .catch(console.error);
+        }
+      })();
     }
   }, []);
 
@@ -81,17 +131,20 @@ export const NewPostModalPage = ({ id, hasError, isLoading, onResetError, onSubm
     setHasFileError(isValid !== true);
     if (isValid) {
       setIsConverting(true);
-
-      convertSound(file, { extension: "mp3" }).then((converted) => {
-        setParams((params) => ({
-          ...params,
-          images: [],
-          movie: undefined,
-          sound: new File([converted], "converted.mp3", { type: "audio/mpeg" }),
-        }));
-
-        setIsConverting(false);
-      });
+      void (async () => {
+        try {
+          const { convertSound } = await loadSoundTools();
+          const converted = await convertSound(file, { extension: "mp3" });
+          setParams((params) => ({
+            ...params,
+            images: [],
+            movie: undefined,
+            sound: new File([converted], "converted.mp3", { type: "audio/mpeg" }),
+          }));
+        } finally {
+          setIsConverting(false);
+        }
+      })();
     }
   }, []);
 
@@ -102,9 +155,10 @@ export const NewPostModalPage = ({ id, hasError, isLoading, onResetError, onSubm
     setHasFileError(isValid !== true);
     if (isValid) {
       setIsConverting(true);
-
-      convertMovie(file, { extension: "gif", size: undefined })
-        .then((converted) => {
+      void (async () => {
+        try {
+          const { convertMovie } = await loadMovieTools();
+          const converted = await convertMovie(file, { extension: "gif", size: undefined });
           setParams((params) => ({
             ...params,
             images: [],
@@ -113,10 +167,12 @@ export const NewPostModalPage = ({ id, hasError, isLoading, onResetError, onSubm
             }),
             sound: undefined,
           }));
-
+        } catch (error) {
+          console.error(error);
+        } finally {
           setIsConverting(false);
-        })
-        .catch(console.error);
+        }
+      })();
     }
   }, []);
 

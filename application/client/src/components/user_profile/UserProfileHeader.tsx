@@ -1,8 +1,11 @@
 import { FastAverageColor } from "fast-average-color";
-import moment from "moment";
 import { ReactEventHandler, useCallback, useState } from "react";
 
 import { FontAwesomeIcon } from "@web-speed-hackathon-2026/client/src/components/foundation/FontAwesomeIcon";
+import {
+  formatLongDate,
+  toISODateTime,
+} from "@web-speed-hackathon-2026/client/src/utils/format_datetime";
 import { getProfileImagePath } from "@web-speed-hackathon-2026/client/src/utils/get_path";
 
 interface Props {
@@ -24,7 +27,8 @@ export const UserProfileHeader = ({ user }: Props) => {
   return (
     <header className="relative">
       <div
-        className={`h-32 ${averageColor ? `bg-[${averageColor}]` : "bg-cax-surface-subtle"}`}
+        className="bg-cax-surface-subtle h-32"
+        style={averageColor != null ? { backgroundColor: averageColor } : undefined}
       ></div>
       <div className="border-cax-border bg-cax-surface-subtle absolute left-2/4 m-0 h-28 w-28 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full border sm:h-32 sm:w-32">
         <img
@@ -43,9 +47,7 @@ export const UserProfileHeader = ({ user }: Props) => {
             <FontAwesomeIcon iconType="calendar-alt" styleType="regular" />
           </span>
           <span>
-            <time dateTime={moment(user.createdAt).toISOString()}>
-              {moment(user.createdAt).locale("ja").format("LL")}
-            </time>
+            <time dateTime={toISODateTime(user.createdAt)}>{formatLongDate(user.createdAt)}</time>
             からサービスを利用しています
           </span>
         </p>
