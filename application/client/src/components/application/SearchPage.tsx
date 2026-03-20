@@ -1,50 +1,63 @@
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { Field, InjectedFormProps, reduxForm, WrappedFieldProps } from "redux-form";
 
 import { Timeline } from "@web-speed-hackathon-2026/client/src/components/timeline/Timeline";
 import {
   parseSearchQuery,
   sanitizeSearchText,
 } from "@web-speed-hackathon-2026/client/src/search/services";
-import { SearchFormData } from "@web-speed-hackathon-2026/client/src/search/types";
 import { validate } from "@web-speed-hackathon-2026/client/src/search/validation";
 
 import { Button } from "../foundation/Button";
 
 interface Props {
+  initialSearchText: string;
   query: string;
   results: Models.Post[];
 }
 
-const SearchInput = ({ input, meta }: WrappedFieldProps) => (
+const SearchInput = ({
+  error,
+  onChange,
+  value,
+}: {
+  error?: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  value: string;
+}) => (
   <div className="flex flex-1 flex-col">
     <input
-      {...input}
       aria-label="検索 (例: キーワード since:2025-01-01 until:2025-12-31)"
       className={`flex-1 rounded border px-4 py-2 focus:outline-none ${
-        meta.touched && meta.error
+        error
           ? "border-cax-danger focus:border-cax-danger"
           : "border-cax-border focus:border-cax-brand-strong"
       }`}
+      onChange={onChange}
       placeholder="検索 (例: キーワード since:2025-01-01 until:2025-12-31)"
       type="text"
+      value={value}
     />
-    {meta.touched && meta.error && (
-      <span className="text-cax-danger mt-1 text-xs">{meta.error}</span>
-    )}
+    {error && <span className="text-cax-danger mt-1 text-xs">{error}</span>}
   </div>
 );
 
 const SearchPageComponent = ({
+  initialSearchText,
   query,
   results,
-  handleSubmit,
-}: Props & InjectedFormProps<SearchFormData, Props>) => {
+}: Props) => {
   const navigate = useNavigate();
   const [isNegative, setIsNegative] = useState(false);
+  const [searchText, setSearchText] = useState(initialSearchText);
+  const [error, setError] = useState<string | undefined>();
 
   const parsed = parseSearchQuery(query);
+
+  useEffect(() => {
+    setSearchText(initialSearchText);
+    setError(undefined);
+  }, [initialSearchText]);
 
   useEffect(() => {
     if (!parsed.keywords) {
@@ -87,17 +100,33 @@ const SearchPageComponent = ({
     return parts.join(" ");
   }, [parsed]);
 
-  const onSubmit = (values: SearchFormData) => {
-    const sanitizedText = sanitizeSearchText(values.searchText.trim());
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const errors = validate({ searchText });
+    if (errors.searchText != null) {
+      setError(errors.searchText);
+      return;
+    }
+
+    const sanitizedText = sanitizeSearchText(searchText.trim());
+    setError(undefined);
     navigate(`/search?q=${encodeURIComponent(sanitizedText)}`);
   };
 
   return (
     <div className="flex flex-col gap-4">
       <div className="bg-cax-surface p-4 shadow">
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={onSubmit}>
           <div className="flex gap-2">
-            <Field name="searchText" component={SearchInput} />
+            <SearchInput
+              error={error}
+              onChange={(event) => {
+                setSearchText(event.currentTarget.value);
+                setError(undefined);
+              }}
+              value={searchText}
+            />
             <Button variant="primary" type="submit">
               検索
             </Button>
@@ -138,8 +167,4 @@ const SearchPageComponent = ({
   );
 };
 
-export const SearchPage = reduxForm<SearchFormData, Props>({
-  form: "search",
-  enableReinitialize: true,
-  validate,
-})(SearchPageComponent);
+export const SearchPage = SearchPageComponent;
