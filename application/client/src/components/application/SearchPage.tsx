@@ -40,7 +40,7 @@ const SearchInput = ({
       onChange={onChange}
       placeholder="検索 (例: キーワード since:2025-01-01 until:2025-12-31)"
       spellCheck={false}
-      type="search"
+      type="text"
       value={value}
     />
     {error && <span className="text-cax-danger mt-1 text-xs">{error}</span>}

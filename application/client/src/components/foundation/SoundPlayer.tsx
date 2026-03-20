@@ -1,11 +1,14 @@
-import { ReactEventHandler, useCallback, useRef, useState } from "react";
+import { ReactEventHandler, useCallback, useEffect, useRef, useState } from "react";
 
 import { AspectRatioBox } from "@web-speed-hackathon-2026/client/src/components/foundation/AspectRatioBox";
 import { FontAwesomeIcon } from "@web-speed-hackathon-2026/client/src/components/foundation/FontAwesomeIcon";
-import { SoundWaveSVG } from "@web-speed-hackathon-2026/client/src/components/foundation/SoundWaveSVG";
-import { useFetch } from "@web-speed-hackathon-2026/client/src/hooks/use_fetch";
-import { fetchBinary } from "@web-speed-hackathon-2026/client/src/utils/fetchers";
-import { getSoundPath } from "@web-speed-hackathon-2026/client/src/utils/get_path";
+import {
+  calculateWaveformData,
+  ParsedData,
+  SoundWaveSVG,
+} from "@web-speed-hackathon-2026/client/src/components/foundation/SoundWaveSVG";
+import { fetchBinary, fetchJSON } from "@web-speed-hackathon-2026/client/src/utils/fetchers";
+import { getSoundPath, getSoundWaveformPath } from "@web-speed-hackathon-2026/client/src/utils/get_path";
 
 interface Props {
   sound: Models.Sound;
@@ -13,7 +16,31 @@ interface Props {
 
 export const SoundPlayer = ({ sound }: Props) => {
   const soundSrc = getSoundPath(sound.id);
-  const { data, isLoading } = useFetch(soundSrc, fetchBinary);
+  const waveformSrc = getSoundWaveformPath(sound.id);
+  const [waveform, setWaveform] = useState<ParsedData | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setWaveform(null);
+
+    void fetchJSON<ParsedData>(waveformSrc)
+      .catch(async () => {
+        const soundData = await fetchBinary(soundSrc);
+        return await calculateWaveformData(soundData);
+      })
+      .then((data) => {
+        if (active) {
+          setWaveform(data);
+        }
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [soundSrc, waveformSrc]);
 
   const [currentTimeRatio, setCurrentTimeRatio] = useState(0);
   const handleTimeUpdate = useCallback<ReactEventHandler<HTMLAudioElement>>((ev) => {
@@ -34,7 +61,7 @@ export const SoundPlayer = ({ sound }: Props) => {
     });
   }, []);
 
-  if (isLoading || data === null) {
+  if (waveform === null) {
     return null;
   }
 
@@ -67,7 +94,7 @@ export const SoundPlayer = ({ sound }: Props) => {
           <AspectRatioBox aspectHeight={1} aspectWidth={10}>
             <div className="relative h-full w-full">
               <div className="absolute inset-0 h-full w-full">
-                <SoundWaveSVG soundData={data} />
+                <SoundWaveSVG waveform={waveform} />
               </div>
               <div
                 className="bg-cax-surface-subtle absolute inset-0 h-full w-full opacity-75"

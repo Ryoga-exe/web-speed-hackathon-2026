@@ -73,6 +73,7 @@ function setStaticHeaders(res: ServerResponse, filePath: string) {
     filePath.startsWith(UPLOAD_PATH) ||
     filePath.startsWith(path.join(PUBLIC_PATH, "images")) ||
     filePath.startsWith(path.join(PUBLIC_PATH, "movies")) ||
+    filePath.startsWith(path.join(PUBLIC_PATH, "waveforms")) ||
     filePath.startsWith(path.join(PUBLIC_PATH, "sounds")) ||
     filePath.endsWith(".avif")
   ) {

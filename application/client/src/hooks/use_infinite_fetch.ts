@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const LIMIT = 30;
+const DEFAULT_INITIAL_LIMIT = 30;
+const DEFAULT_PAGE_LIMIT = 30;
 
 interface ReturnValues<T> {
   data: Array<T>;
@@ -9,9 +10,14 @@ interface ReturnValues<T> {
   fetchMore: () => void;
 }
 
-function buildPaginatedPath(apiPath: string, offset: number): string {
+interface Options {
+  initialLimit?: number;
+  pageLimit?: number;
+}
+
+function buildPaginatedPath(apiPath: string, limit: number, offset: number): string {
   const url = new URL(apiPath, window.location.origin);
-  url.searchParams.set("limit", String(LIMIT));
+  url.searchParams.set("limit", String(limit));
   url.searchParams.set("offset", String(offset));
   return `${url.pathname}${url.search}`;
 }
@@ -19,7 +25,10 @@ function buildPaginatedPath(apiPath: string, offset: number): string {
 export function useInfiniteFetch<T>(
   apiPath: string,
   fetcher: (apiPath: string) => Promise<T[]>,
+  options: Options = {},
 ): ReturnValues<T> {
+  const initialLimit = options.initialLimit ?? DEFAULT_INITIAL_LIMIT;
+  const pageLimit = options.pageLimit ?? DEFAULT_PAGE_LIMIT;
   const internalRef = useRef({ hasMore: true, isLoading: false, offset: 0 });
 
   const [result, setResult] = useState<Omit<ReturnValues<T>, "fetchMore">>({
@@ -33,6 +42,7 @@ export function useInfiniteFetch<T>(
     if (apiPath === "" || !hasMore || isLoading) {
       return;
     }
+    const limit = offset === 0 ? initialLimit : pageLimit;
 
     setResult((cur) => ({
       ...cur,
@@ -44,7 +54,7 @@ export function useInfiniteFetch<T>(
       offset,
     };
 
-    void fetcher(buildPaginatedPath(apiPath, offset)).then(
+    void fetcher(buildPaginatedPath(apiPath, limit, offset)).then(
       (pageData) => {
         setResult((cur) => ({
           ...cur,
@@ -52,7 +62,7 @@ export function useInfiniteFetch<T>(
           isLoading: false,
         }));
         internalRef.current = {
-          hasMore: pageData.length === LIMIT,
+          hasMore: pageData.length === limit,
           isLoading: false,
           offset: offset + pageData.length,
         };
@@ -70,7 +80,7 @@ export function useInfiniteFetch<T>(
         };
       },
     );
-  }, [apiPath, fetcher]);
+  }, [apiPath, fetcher, initialLimit, pageLimit]);
 
   useEffect(() => {
     if (apiPath === "") {

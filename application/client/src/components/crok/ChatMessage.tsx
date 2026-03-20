@@ -10,6 +10,7 @@ import { CrokLogo } from "@web-speed-hackathon-2026/client/src/components/founda
 
 interface Props {
   message: Models.ChatMessage;
+  streaming?: boolean;
 }
 
 const UserMessage = ({ content }: { content: string }) => {
@@ -22,7 +23,7 @@ const UserMessage = ({ content }: { content: string }) => {
   );
 };
 
-const AssistantMessage = ({ content }: { content: string }) => {
+const AssistantMessage = ({ content, streaming = false }: { content: string; streaming?: boolean }) => {
   return (
     <div className="mb-6 flex gap-4">
       <div className="h-8 w-8 shrink-0">
@@ -31,7 +32,7 @@ const AssistantMessage = ({ content }: { content: string }) => {
       <div className="min-w-0 flex-1">
         <div className="text-cax-text mb-1 text-sm font-medium">Crok</div>
         <div className="markdown text-cax-text max-w-none">
-          {content ? (
+          {content && !streaming ? (
             <Markdown
               components={{ pre: CodeBlock }}
               key={content}
@@ -40,6 +41,13 @@ const AssistantMessage = ({ content }: { content: string }) => {
             >
               {content}
             </Markdown>
+          ) : content ? (
+            <>
+              <div aria-label="応答中" className="sr-only" role="status">
+                応答中
+              </div>
+              <p className="whitespace-pre-wrap">{content}</p>
+            </>
           ) : (
             <TypingIndicator />
           )}
@@ -49,9 +57,9 @@ const AssistantMessage = ({ content }: { content: string }) => {
   );
 };
 
-export const ChatMessage = ({ message }: Props) => {
+export const ChatMessage = ({ message, streaming = false }: Props) => {
   if (message.role === "user") {
     return <UserMessage content={message.content} />;
   }
-  return <AssistantMessage content={message.content} />;
+  return <AssistantMessage content={message.content} streaming={streaming} />;
 };

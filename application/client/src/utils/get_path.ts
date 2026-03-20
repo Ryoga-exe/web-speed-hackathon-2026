@@ -14,6 +14,10 @@ export function getSoundPath(soundId: string): string {
   return `/sounds/${soundId}`;
 }
 
+export function getSoundWaveformPath(soundId: string): string {
+  return `/waveforms/${soundId}.json`;
+}
+
 export function getProfileImagePath(profileImageId: string): string {
   return `/images/profiles/${profileImageId}`;
 }
