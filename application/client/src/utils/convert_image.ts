@@ -55,6 +55,15 @@ async function convertImageWithCanvas(file: File, options: Options): Promise<Blo
   const height = Math.max(1, Math.round(bitmap.height * scale));
   const { mimeType, quality } = getOutputSettings(options.extension);
 
+  if (
+    scale === 1 &&
+    ((options.extension === "jpg" && file.type === "image/jpeg") ||
+      (options.extension === "avif" && file.type === "image/avif"))
+  ) {
+    bitmap.close();
+    return file.slice(0, file.size, mimeType);
+  }
+
   if (typeof OffscreenCanvas !== "undefined") {
     const canvas = new OffscreenCanvas(width, height);
     const context = canvas.getContext("2d");

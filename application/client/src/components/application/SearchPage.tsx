@@ -27,15 +27,20 @@ const SearchInput = ({
 }) => (
   <div className="flex flex-1 flex-col">
     <input
+      autoCapitalize="none"
+      autoCorrect="off"
       aria-label="検索 (例: キーワード since:2025-01-01 until:2025-12-31)"
       className={`flex-1 rounded border px-4 py-2 focus:outline-none ${
         error
           ? "border-cax-danger focus:border-cax-danger"
           : "border-cax-border focus:border-cax-brand-strong"
       }`}
+      enterKeyHint="search"
+      name="q"
       onChange={onChange}
       placeholder="検索 (例: キーワード since:2025-01-01 until:2025-12-31)"
-      type="text"
+      spellCheck={false}
+      type="search"
       value={value}
     />
     {error && <span className="text-cax-danger mt-1 text-xs">{error}</span>}

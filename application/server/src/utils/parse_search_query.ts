@@ -4,40 +4,61 @@ interface ParsedSearchQuery {
   untilDate: Date | null;
 }
 
+const DATE_LENGTH = 10;
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 function isValidDate(date: Date): boolean {
   return !isNaN(date.getTime());
 }
 
+function splitQuery(query: string): string[] {
+  return query.trim().split(/\s+/u).filter(Boolean);
+}
+
+function extractDirectiveDate(token: string, key: "since" | "until"): string | null {
+  const lowerToken = token.toLowerCase();
+  const prefix = `${key}:`;
+  if (!lowerToken.startsWith(prefix)) {
+    return null;
+  }
+
+  const value = token.slice(prefix.length);
+  if (value.length < DATE_LENGTH) {
+    return null;
+  }
+
+  const candidate = value.slice(0, DATE_LENGTH);
+  return ISO_DATE_PATTERN.test(candidate) ? candidate : null;
+}
+
 export function parseSearchQuery(query: string): ParsedSearchQuery {
-  const sincePattern = /since:(\d{4}-\d{2}-\d{2})/;
-  const untilPattern = /until:(\d{4}-\d{2}-\d{2})/;
+  const tokens = splitQuery(query);
 
   let sinceDate: Date | null = null;
   let untilDate: Date | null = null;
 
-  const sinceMatch = sincePattern.exec(query);
-  if (sinceMatch) {
-    const date = new Date(sinceMatch[1]!);
+  const sinceValue = tokens.map((token) => extractDirectiveDate(token, "since")).find(Boolean) ?? null;
+  if (sinceValue != null) {
+    const date = new Date(sinceValue);
     if (isValidDate(date)) {
       date.setHours(0, 0, 0, 0);
       sinceDate = date;
     }
   }
 
-  const untilMatch = untilPattern.exec(query);
-  if (untilMatch) {
-    const date = new Date(untilMatch[1]!);
+  const untilValue = tokens.map((token) => extractDirectiveDate(token, "until")).find(Boolean) ?? null;
+  if (untilValue != null) {
+    const date = new Date(untilValue);
     if (isValidDate(date)) {
       date.setHours(23, 59, 59, 999);
       untilDate = date;
     }
   }
 
-  const keywords = query
-    .replace(/since:\d{4}-\d{2}-\d{2}/g, "")
-    .replace(/until:\d{4}-\d{2}-\d{2}/g, "")
-    .trim()
-    .replace(/\s+/g, " ");
+  const keywords = tokens
+    .filter((token) => extractDirectiveDate(token, "since") == null)
+    .filter((token) => extractDirectiveDate(token, "until") == null)
+    .join(" ");
 
   return {
     keywords,

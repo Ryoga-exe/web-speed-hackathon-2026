@@ -6,6 +6,7 @@ import { ModalSubmitButton } from "@web-speed-hackathon-2026/client/src/componen
 import { AttachFileInputButton } from "@web-speed-hackathon-2026/client/src/components/new_post_modal/AttachFileInputButton";
 
 const MAX_UPLOAD_BYTES_LIMIT = 10 * 1024 * 1024;
+const MAX_DIRECT_IMAGE_BYTES = 256 * 1024;
 
 let imageToolsPromise: Promise<{
   convertImage: typeof import("@web-speed-hackathon-2026/client/src/utils/convert_image").convertImage;
@@ -101,9 +102,28 @@ export const NewPostModalPage = ({ id, hasError, isLoading, onResetError, onSubm
   const handleChangeImages = useCallback<ChangeEventHandler<HTMLInputElement>>((ev) => {
     const files = Array.from(ev.currentTarget.files ?? []).slice(0, 4);
     const isValid = files.every((file) => file.size <= MAX_UPLOAD_BYTES_LIMIT);
+    const canUploadDirectly = files.every(
+      (file) =>
+        file.size <= MAX_DIRECT_IMAGE_BYTES &&
+        (file.type === "image/avif" || file.type === "image/jpeg"),
+    );
 
     setHasFileError(isValid !== true);
     if (isValid) {
+      if (canUploadDirectly) {
+        setParams((params) => ({
+          ...params,
+          images: files.map((file) => ({
+            alt: "",
+            file,
+          })),
+          movie: undefined,
+          sound: undefined,
+        }));
+        setIsConverting(false);
+        return;
+      }
+
       setIsConverting(true);
       void (async () => {
         try {

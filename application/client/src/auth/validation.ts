@@ -2,6 +2,10 @@ import { AuthFormData } from "@web-speed-hackathon-2026/client/src/auth/types";
 
 export type AuthFormErrors = Partial<Record<keyof AuthFormData, string>>;
 
+function isMissingSymbol(password: string): boolean {
+  return Array.from(password).length >= 16 && !/[^\p{Letter}\p{Number}]/u.test(password);
+}
+
 export const validate = (values: AuthFormData): AuthFormErrors => {
   const errors: AuthFormErrors = {};
 
@@ -13,7 +17,7 @@ export const validate = (values: AuthFormData): AuthFormErrors => {
     errors.name = "名前を入力してください";
   }
 
-  if (/^(?:[^\P{Letter}&&\P{Number}]*){16,}$/v.test(normalizedPassword)) {
+  if (isMissingSymbol(normalizedPassword)) {
     errors.password = "パスワードには記号を含める必要があります";
   }
   if (normalizedPassword.length === 0) {
