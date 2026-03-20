@@ -1,4 +1,5 @@
-import { useRef } from "react";
+import React, { useRef } from "react";
+void React;
 
 export interface ParsedData {
   max: number;

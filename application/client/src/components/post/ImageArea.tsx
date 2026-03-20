@@ -1,3 +1,5 @@
+import React from "react";
+void React;
 import classNames from "classnames";
 
 import { AspectRatioBox } from "@web-speed-hackathon-2026/client/src/components/foundation/AspectRatioBox";

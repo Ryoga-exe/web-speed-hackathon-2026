@@ -13,13 +13,14 @@ import {
   UPLOAD_PATH,
 } from "@web-speed-hackathon-2026/server/src/paths";
 import { createPostPayloadQuery } from "@web-speed-hackathon-2026/server/src/routes/api/post_payloads";
+import { renderAppHtml } from "@web-speed-hackathon-2026/server/src/utils/render_app_html";
 import { renderIndexDocument } from "@web-speed-hackathon-2026/server/src/utils/render_index_document";
 import { AppBootstrapData } from "@web-speed-hackathon-2026/client/src/bootstrap";
 
 export const staticRouter = Router();
 
 const IMMUTABLE_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
-const HOME_INITIAL_POST_LIMIT = 6;
+const HOME_INITIAL_POST_LIMIT = 4;
 
 function escapeHtmlAttribute(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
@@ -209,8 +210,13 @@ staticRouter.get("/", async (_req, res, next) => {
     const initialTimelinePosts = JSON.parse(
       JSON.stringify(posts),
     ) as NonNullable<AppBootstrapData["initialTimelinePosts"]>;
+    const bootstrap = { initialTimelinePosts } satisfies AppBootstrapData;
     const html = await renderIndexDocument({
-      bootstrap: { initialTimelinePosts },
+      appHtml: await renderAppHtml({
+        bootstrap,
+        pathname: "/",
+      }),
+      bootstrap,
       headTags: buildHomePreloadTags(initialTimelinePosts),
       title: "タイムライン - CaX",
     });
@@ -225,6 +231,9 @@ staticRouter.get("/", async (_req, res, next) => {
 staticRouter.get("/terms", async (_req, res, next) => {
   try {
     const html = await renderIndexDocument({
+      appHtml: await renderAppHtml({
+        pathname: "/terms",
+      }),
       headTags: createPreloadLink({
         as: "font",
         href: "/fonts/ReiNoAreMincho-Heading-Bold.woff2",

@@ -1,3 +1,6 @@
+import React from "react";
+void React;
+
 import { SoundPlayer } from "@web-speed-hackathon-2026/client/src/components/foundation/SoundPlayer";
 
 interface Props {

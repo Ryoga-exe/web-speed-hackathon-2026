@@ -1,3 +1,6 @@
+import React from "react";
+void React;
+
 import { Helmet } from "@web-speed-hackathon-2026/client/src/components/foundation/Helmet";
 
 import { TermPage } from "@web-speed-hackathon-2026/client/src/components/term/TermPage";

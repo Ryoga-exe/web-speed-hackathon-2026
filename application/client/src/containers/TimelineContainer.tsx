@@ -1,4 +1,5 @@
-import { useState } from "react";
+import React, { useState } from "react";
+void React;
 
 import { Helmet } from "@web-speed-hackathon-2026/client/src/components/foundation/Helmet";
 
@@ -8,7 +9,7 @@ import { useInfiniteFetch } from "@web-speed-hackathon-2026/client/src/hooks/use
 import { fetchJSON } from "@web-speed-hackathon-2026/client/src/utils/fetchers";
 
 let hasConsumedClientBootstrapTimeline = false;
-const INITIAL_TIMELINE_POST_LIMIT = 6;
+const INITIAL_TIMELINE_POST_LIMIT = 4;
 
 function consumeInitialPosts(initialPosts: Models.Post[] | undefined) {
   if (initialPosts == null) {

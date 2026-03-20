@@ -1,3 +1,6 @@
+import React from "react";
+void React;
+
 import { PausableMovie } from "@web-speed-hackathon-2026/client/src/components/foundation/PausableMovie";
 import {
   getLegacyMoviePath,

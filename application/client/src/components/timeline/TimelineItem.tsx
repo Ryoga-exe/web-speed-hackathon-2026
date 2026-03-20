@@ -1,4 +1,5 @@
-import { MouseEventHandler, useCallback } from "react";
+import React, { MouseEventHandler, useCallback } from "react";
+void React;
 import { Link, useNavigate } from "react-router";
 
 import { ImageArea } from "@web-speed-hackathon-2026/client/src/components/post/ImageArea";

@@ -1,3 +1,6 @@
+import React from "react";
+void React;
+
 import { TimelineItem } from "@web-speed-hackathon-2026/client/src/components/timeline/TimelineItem";
 
 interface Props {

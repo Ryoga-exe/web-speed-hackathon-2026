@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import React, { useCallback, useState } from "react";
+void React;
 
 type State =
   | { type: "idle"; text: string }

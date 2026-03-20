@@ -1,4 +1,5 @@
-import { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
+void React;
 import { useNavigate } from "react-router";
 
 import { Modal } from "@web-speed-hackathon-2026/client/src/components/modal/Modal";

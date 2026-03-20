@@ -1,4 +1,5 @@
-import { Children, isValidElement, ReactNode, useEffect } from "react";
+import React, { Children, isValidElement, ReactNode, useEffect } from "react";
+void React;
 
 interface HelmetProps {
   children?: ReactNode;

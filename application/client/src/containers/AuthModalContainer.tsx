@@ -1,4 +1,5 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
+void React;
 
 import { AuthFormData } from "@web-speed-hackathon-2026/client/src/auth/types";
 import { Modal } from "@web-speed-hackathon-2026/client/src/components/modal/Modal";

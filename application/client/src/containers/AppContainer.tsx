@@ -1,4 +1,5 @@
-import { Suspense, useCallback, useEffect, useId, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useId, useState } from "react";
+void React;
 import { AppBootstrapData } from "@web-speed-hackathon-2026/client/src/bootstrap";
 import { Helmet, HelmetProvider } from "@web-speed-hackathon-2026/client/src/components/foundation/Helmet";
 import { Route, Routes, useLocation, useNavigate } from "react-router";

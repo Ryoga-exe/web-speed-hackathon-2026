@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
+void React;
 
 import { Navigation } from "@web-speed-hackathon-2026/client/src/components/application/Navigation";
 

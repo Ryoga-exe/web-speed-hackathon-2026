@@ -1,4 +1,5 @@
-import { CSSProperties, ReactNode } from "react";
+import React, { CSSProperties, ReactNode } from "react";
+void React;
 
 interface Props {
   aspectHeight: number;

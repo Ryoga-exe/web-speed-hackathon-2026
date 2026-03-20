@@ -1,3 +1,6 @@
+import React from "react";
+void React;
+
 import { AccountMenu } from "@web-speed-hackathon-2026/client/src/components/application/AccountMenu";
 import { NavigationItem } from "@web-speed-hackathon-2026/client/src/components/application/NavigationItem";
 import { DirectMessageNotificationBadge } from "@web-speed-hackathon-2026/client/src/components/direct_message/DirectMessageNotificationBadge";

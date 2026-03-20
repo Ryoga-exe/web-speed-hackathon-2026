@@ -1,4 +1,5 @@
-import { AnchorHTMLAttributes, forwardRef } from "react";
+import React, { AnchorHTMLAttributes, forwardRef } from "react";
+void React;
 import { To, useHref } from "react-router";
 
 type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {

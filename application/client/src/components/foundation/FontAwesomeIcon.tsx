@@ -1,3 +1,6 @@
+import React from "react";
+void React;
+
 interface Props {
   iconType: string;
   styleType: "solid" | "regular";
