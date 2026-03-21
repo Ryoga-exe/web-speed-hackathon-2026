@@ -14,21 +14,48 @@ export function useHasContentBelow(
   const [hasContentBelow, setHasContentBelow] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    const check = () => {
-      if (!active) return;
-      const endEl = contentEndRef.current;
-      const barEl = boundaryRef.current;
-      if (endEl && barEl) {
-        const endRect = endEl.getBoundingClientRect();
-        const barRect = barEl.getBoundingClientRect();
-        setHasContentBelow(endRect.top > barRect.top);
-      }
-      scheduler.postTask(check, { priority: "user-blocking", delay: 1 });
+    const endEl = contentEndRef.current;
+    const barEl = boundaryRef.current;
+
+    if (endEl == null || barEl == null) {
+      setHasContentBelow(false);
+      return;
+    }
+
+    let intersectionObserver: IntersectionObserver | null = null;
+
+    const bindObservers = () => {
+      intersectionObserver?.disconnect();
+      const boundaryHeight = Math.ceil(barEl.getBoundingClientRect().height);
+      intersectionObserver = new IntersectionObserver(
+        ([entry]) => {
+          setHasContentBelow(!(entry?.isIntersecting ?? false));
+        },
+        {
+          root: null,
+          rootMargin: `0px 0px -${boundaryHeight}px 0px`,
+          threshold: 0,
+        },
+      );
+      intersectionObserver.observe(endEl);
     };
-    scheduler.postTask(check, { priority: "user-blocking", delay: 1 });
+
+    bindObservers();
+
+    const resizeObserver = new ResizeObserver(() => {
+      bindObservers();
+    });
+    resizeObserver.observe(barEl);
+
+    const handleResize = () => {
+      bindObservers();
+    };
+    window.addEventListener("resize", handleResize, { passive: true });
+
     return () => {
-      active = false;
+      intersectionObserver?.disconnect();
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", handleResize);
     };
   }, [contentEndRef, boundaryRef]);
 

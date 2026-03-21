@@ -46,45 +46,29 @@ function requiresResolvedActiveUser(pathname: string) {
 }
 
 function scheduleDeferredTask(task: () => void) {
-  if (typeof window !== "undefined") {
-    let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
-    let callbackId: number | null = null;
-    let disposed = false;
+  let callbackId: number | null = null;
+  let disposed = false;
 
-    const scheduleTask = () => {
-      if (disposed) {
-        return;
-      }
-
-      if ("requestIdleCallback" in window) {
-        callbackId = window.requestIdleCallback(task, { timeout: 3000 });
-        return;
-      }
-
-      timeoutId = globalThis.setTimeout(task, 1000);
-    };
-
-    if (document.readyState === "complete") {
-      scheduleTask();
-    } else {
-      window.addEventListener("load", scheduleTask, { once: true });
+  const scheduleTask = () => {
+    if (disposed) {
+      return;
     }
 
-    return () => {
-      disposed = true;
-      window.removeEventListener("load", scheduleTask);
-      if (callbackId !== null) {
-        window.cancelIdleCallback(callbackId);
-      }
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-      }
-    };
+    callbackId = window.requestIdleCallback(task, { timeout: 3000 });
+  };
+
+  if (document.readyState === "complete") {
+    scheduleTask();
+  } else {
+    window.addEventListener("load", scheduleTask, { once: true });
   }
 
-  const timeoutId = globalThis.setTimeout(task, 250);
   return () => {
-    globalThis.clearTimeout(timeoutId);
+    disposed = true;
+    window.removeEventListener("load", scheduleTask);
+    if (callbackId !== null) {
+      window.cancelIdleCallback(callbackId);
+    }
   };
 }
 
