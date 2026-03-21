@@ -21,6 +21,9 @@ export const staticRouter = Router();
 
 const IMMUTABLE_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const HOME_INITIAL_POST_LIMIT = 3;
+const STATIC_HTML_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=86400";
+
+let cachedTermsDocumentPromise: Promise<string> | null = null;
 
 function escapeHtmlAttribute(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
@@ -97,6 +100,37 @@ function buildHomePreloadTags(posts: Models.Post[]) {
 
   return Array.from(preloadLinks).join("");
 }
+
+async function buildTermsDocument() {
+  return await renderIndexDocument({
+    appHtml: await renderAppHtml({
+      pathname: "/terms",
+    }),
+    headTags: createPreloadLink({
+      as: "font",
+      href: "/fonts/ReiNoAreMincho-Heading-Bold.woff2",
+      type: "font/woff2",
+    }),
+    title: "利用規約 - CaX",
+  });
+}
+
+async function getTermsDocument() {
+  if (cachedTermsDocumentPromise != null) {
+    return await cachedTermsDocumentPromise;
+  }
+
+  cachedTermsDocumentPromise = buildTermsDocument().catch((error) => {
+    cachedTermsDocumentPromise = null;
+    throw error;
+  });
+
+  return await cachedTermsDocumentPromise;
+}
+
+void getTermsDocument().catch(() => {
+  // 初回リクエスト前に prewarm したいが、失敗しても route で再試行させる。
+});
 
 async function resolveFirstExistingPath(paths: string[]) {
   for (const filePath of paths) {
@@ -237,19 +271,9 @@ staticRouter.get("/", async (_req, res, next) => {
 
 staticRouter.get("/terms", async (_req, res, next) => {
   try {
-    const html = await renderIndexDocument({
-      appHtml: await renderAppHtml({
-        pathname: "/terms",
-      }),
-      headTags: createPreloadLink({
-        as: "font",
-        href: "/fonts/ReiNoAreMincho-Heading-Bold.woff2",
-        type: "font/woff2",
-      }),
-      title: "利用規約 - CaX",
-    });
+    const html = await getTermsDocument();
 
-    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Cache-Control", STATIC_HTML_CACHE_CONTROL);
     res.status(200).type("text/html").send(html);
   } catch (error) {
     next(error);

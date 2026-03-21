@@ -5,12 +5,24 @@ interface Params {
   pathname: string;
 }
 
+let cachedRenderAppPromise: Promise<{
+  renderApp: (params: { bootstrap?: AppBootstrapData; pathname: string }) => string;
+}> | null = null;
+
 async function loadRenderApp() {
-  const moduleUrl = new URL("../../../client/src/ssr/render_app.tsx", import.meta.url).href;
-  const module = await import(moduleUrl);
-  return module as {
-    renderApp: (params: { bootstrap?: AppBootstrapData; pathname: string }) => string;
-  };
+  if (cachedRenderAppPromise != null) {
+    return cachedRenderAppPromise;
+  }
+
+  cachedRenderAppPromise = (async () => {
+    const moduleUrl = new URL("../../../client/src/ssr/render_app.tsx", import.meta.url).href;
+    const module = await import(moduleUrl);
+    return module as {
+      renderApp: (params: { bootstrap?: AppBootstrapData; pathname: string }) => string;
+    };
+  })();
+
+  return cachedRenderAppPromise;
 }
 
 export async function renderAppHtml({ bootstrap, pathname }: Params) {
