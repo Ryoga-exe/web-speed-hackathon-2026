@@ -17,7 +17,7 @@ interface Props {
   isStreaming: boolean;
   onSendMessage: (message: string) => void;
 }
-const MIN_SUGGEST_QUERY_LENGTH = 2;
+const MIN_SUGGEST_QUERY_LENGTH = 1;
 const SUGGESTION_DEBOUNCE_MS = 180;
 
 // トークン単位でハイライト
