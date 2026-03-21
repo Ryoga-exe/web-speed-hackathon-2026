@@ -317,7 +317,9 @@ directMessageRouter.post("/dm/:conversationId/typing", async (req, res) => {
     throw new httpErrors.NotFound();
   }
 
-  eventhub.emit(`dm:conversation/${conversation.id}:typing/${req.session.userId}`, {});
+  eventhub.emit(`dm:conversation/${conversation.id}:typing/${req.session.userId}`, {
+    isTyping: req.body?.isTyping !== false,
+  });
 
   return res.status(200).type("application/json").send({});
 });

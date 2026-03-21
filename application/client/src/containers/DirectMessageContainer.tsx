@@ -15,10 +15,12 @@ interface DmUpdateEvent {
 }
 interface DmTypingEvent {
   type: "dm:conversation:typing";
-  payload: {};
+  payload: {
+    isTyping: boolean;
+  };
 }
 
-const TYPING_INDICATOR_DURATION_MS = 10 * 1000;
+const TYPING_INDICATOR_DURATION_MS = 2 * 1000;
 const DIRECT_MESSAGE_PAGE_LIMIT = 50;
 
 interface DirectMessageConversationPayload extends Models.DirectMessageConversation {
@@ -154,8 +156,8 @@ export const DirectMessageContainer = ({ activeUser, authModalId }: Props) => {
     [conversationId],
   );
 
-  const handleTyping = useCallback(async () => {
-    void sendJSON(`/api/v1/dm/${conversationId}/typing`, {});
+  const handleTypingChange = useCallback(async (isTyping: boolean) => {
+    void sendJSON(`/api/v1/dm/${conversationId}/typing`, { isTyping });
   }, [conversationId]);
 
   useWs(activeUser == null ? null : `/api/v1/dm/${conversationId}`, (event: DmUpdateEvent | DmTypingEvent) => {
@@ -179,6 +181,15 @@ export const DirectMessageContainer = ({ activeUser, authModalId }: Props) => {
       }
       void sendRead();
     } else if (event.type === "dm:conversation:typing") {
+      if (event.payload.isTyping === false) {
+        setIsPeerTyping(false);
+        if (peerTypingTimeoutRef.current !== null) {
+          clearTimeout(peerTypingTimeoutRef.current);
+        }
+        peerTypingTimeoutRef.current = null;
+        return;
+      }
+
       setIsPeerTyping(true);
       if (peerTypingTimeoutRef.current !== null) {
         clearTimeout(peerTypingTimeoutRef.current);
@@ -219,7 +230,7 @@ export const DirectMessageContainer = ({ activeUser, authModalId }: Props) => {
         activeUser={activeUser}
         hasMoreBefore={hasMoreBefore}
         isLoadingOlder={isLoadingOlder}
-        onTyping={handleTyping}
+        onTypingChange={handleTypingChange}
         onLoadOlder={handleLoadOlder}
         isPeerTyping={isPeerTyping}
         isSubmitting={isSubmitting}

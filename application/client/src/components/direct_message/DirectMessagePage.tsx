@@ -1,6 +1,7 @@
 import classNames from "classnames";
 import {
   ChangeEvent,
+  useEffect,
   useCallback,
   useId,
   useLayoutEffect,
@@ -24,9 +25,11 @@ interface Props {
   isPeerTyping: boolean;
   onLoadOlder: () => void;
   isSubmitting: boolean;
-  onTyping: () => void;
+  onTypingChange: (isTyping: boolean) => void;
   onSubmit: (params: DirectMessageFormData) => Promise<void>;
 }
+
+const TYPING_IDLE_MS = 1500;
 
 export const DirectMessagePage = ({
   conversationError,
@@ -37,7 +40,7 @@ export const DirectMessagePage = ({
   isPeerTyping,
   onLoadOlder,
   isSubmitting,
-  onTyping,
+  onTypingChange,
   onSubmit,
 }: Props) => {
   const formRef = useRef<HTMLFormElement>(null);
@@ -45,6 +48,8 @@ export const DirectMessagePage = ({
   const textAreaId = useId();
   const previousLastMessageIdRef = useRef<string | null>(null);
   const previousScrollHeightRef = useRef<number | null>(null);
+  const isTypingRef = useRef(false);
+  const typingStopTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const peer =
     conversation.initiator.id !== activeUser.id ? conversation.initiator : conversation.member;
@@ -53,12 +58,47 @@ export const DirectMessagePage = ({
   const textAreaRows = Math.min((text || "").split("\n").length, 5);
   const isInvalid = text.trim().length === 0;
 
+  const clearTypingStopTimeout = useCallback(() => {
+    if (typingStopTimeoutRef.current !== null) {
+      clearTimeout(typingStopTimeoutRef.current);
+      typingStopTimeoutRef.current = null;
+    }
+  }, []);
+
+  const updateTypingState = useCallback(
+    (isTyping: boolean) => {
+      if (isTypingRef.current === isTyping) {
+        return;
+      }
+
+      isTypingRef.current = isTyping;
+      onTypingChange(isTyping);
+    },
+    [onTypingChange],
+  );
+
+  const scheduleTypingStop = useCallback(() => {
+    clearTypingStopTimeout();
+    typingStopTimeoutRef.current = setTimeout(() => {
+      updateTypingState(false);
+    }, TYPING_IDLE_MS);
+  }, [clearTypingStopTimeout, updateTypingState]);
+
   const handleChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
-      setText(event.target.value);
-      onTyping();
+      const nextText = event.target.value;
+      setText(nextText);
+
+      if (nextText.trim().length === 0) {
+        clearTypingStopTimeout();
+        updateTypingState(false);
+        return;
+      }
+
+      updateTypingState(true);
+      scheduleTypingStop();
     },
-    [onTyping],
+    [clearTypingStopTimeout, scheduleTypingStop, updateTypingState],
   );
 
   const handleKeyDown = useCallback(
@@ -74,12 +114,28 @@ export const DirectMessagePage = ({
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      clearTypingStopTimeout();
+      updateTypingState(false);
       void onSubmit({ body: text.trim() }).then(() => {
         setText("");
       });
     },
-    [onSubmit, text],
+    [clearTypingStopTimeout, onSubmit, text, updateTypingState],
   );
+
+  const handleBlur = useCallback(() => {
+    clearTypingStopTimeout();
+    updateTypingState(false);
+  }, [clearTypingStopTimeout, updateTypingState]);
+
+  useEffect(() => {
+    return () => {
+      clearTypingStopTimeout();
+      if (isTypingRef.current) {
+        onTypingChange(false);
+      }
+    };
+  }, [clearTypingStopTimeout, onTypingChange]);
 
   useLayoutEffect(() => {
     const messagesElement = messagesRef.current;
@@ -214,6 +270,7 @@ export const DirectMessagePage = ({
             <textarea
               id={textAreaId}
               className="border-cax-border placeholder-cax-text-subtle focus:outline-cax-brand w-full resize-none rounded-xl border px-3 py-2 focus:outline-2 focus:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              onBlur={handleBlur}
               value={text}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
