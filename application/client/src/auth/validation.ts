@@ -1,10 +1,7 @@
 import { AuthFormData } from "@web-speed-hackathon-2026/client/src/auth/types";
 
 export type AuthFormErrors = Partial<Record<keyof AuthFormData, string>>;
-
-function isMissingSymbol(password: string): boolean {
-  return Array.from(password).length >= 16 && !/[^\p{Letter}\p{Number}]/u.test(password);
-}
+const ALNUM_ONLY_PASSWORD_PATTERN = /^[\p{Letter}\p{Number}]*$/u;
 
 export const validate = (values: AuthFormData): AuthFormErrors => {
   const errors: AuthFormErrors = {};
@@ -17,7 +14,7 @@ export const validate = (values: AuthFormData): AuthFormErrors => {
     errors.name = "名前を入力してください";
   }
 
-  if (isMissingSymbol(normalizedPassword)) {
+  if (ALNUM_ONLY_PASSWORD_PATTERN.test(normalizedPassword)) {
     errors.password = "パスワードには記号を含める必要があります";
   }
   if (normalizedPassword.length === 0) {
