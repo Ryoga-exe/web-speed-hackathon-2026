@@ -20,7 +20,7 @@ import { AppBootstrapData } from "@web-speed-hackathon-2026/client/src/bootstrap
 export const staticRouter = Router();
 
 const IMMUTABLE_ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
-const HOME_INITIAL_POST_LIMIT = 4;
+const HOME_INITIAL_POST_LIMIT = 3;
 
 function escapeHtmlAttribute(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
@@ -63,26 +63,33 @@ function buildHomePreloadTags(posts: Models.Post[]) {
     }),
   );
 
-  if (firstPost.images?.length > 0) {
+  const firstMediaPost = posts.find((post) => {
+    return (post.images?.length ?? 0) > 0 || post.movie != null || post.sound != null;
+  });
+  const firstImage = firstMediaPost?.images?.[0];
+  const firstMovie = firstMediaPost?.movie;
+  const firstSound = firstMediaPost?.sound;
+
+  if (firstImage != null) {
     preloadLinks.add(
       createPreloadLink({
         as: "image",
-        href: `/images/${firstPost.images[0]!.id}`,
+        href: `/images/${firstImage.id}`,
       }),
     );
-  } else if (firstPost.movie != null) {
+  } else if (firstMovie != null) {
     preloadLinks.add(
       createPreloadLink({
-        as: "video",
-        href: `/movies/${firstPost.movie.id}.mp4`,
-        type: "video/mp4",
+        as: "image",
+        href: `/movies/${firstMovie.id}.jpg`,
+        type: "image/jpeg",
       }),
     );
-  } else if (firstPost.sound != null) {
+  } else if (firstSound != null) {
     preloadLinks.add(
       createPreloadLink({
         as: "fetch",
-        href: `/waveforms/${firstPost.sound.id}.json`,
+        href: `/waveforms/${firstSound.id}.json`,
         type: "application/json",
       }),
     );

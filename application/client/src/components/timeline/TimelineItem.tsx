@@ -33,11 +33,16 @@ const isClickedAnchorOrButton = (target: EventTarget | null, currentTarget: Elem
 interface Props {
   post: Models.Post;
   prioritizeMedia?: boolean;
+  prioritizeRendering?: boolean;
 }
 
-export const TimelineItem = ({ post, prioritizeMedia = false }: Props) => {
+export const TimelineItem = ({
+  post,
+  prioritizeMedia = false,
+  prioritizeRendering = false,
+}: Props) => {
   const navigate = useNavigate();
-  const visibilityStyle = prioritizeMedia
+  const visibilityStyle = prioritizeRendering
     ? undefined
     : {
         containIntrinsicSize: "auto 24rem",
@@ -71,6 +76,8 @@ export const TimelineItem = ({ post, prioritizeMedia = false }: Props) => {
           >
             <img
               alt={post.user.profileImage.alt}
+              fetchPriority={prioritizeRendering ? "high" : "low"}
+              loading={prioritizeRendering ? "eager" : "lazy"}
               src={getProfileImagePath(post.user.profileImage.id)}
             />
           </Link>
@@ -104,7 +111,7 @@ export const TimelineItem = ({ post, prioritizeMedia = false }: Props) => {
           ) : null}
           {post.movie ? (
             <div className="relative mt-2 w-full">
-              <MovieArea movie={post.movie} />
+              <MovieArea interactive={false} movie={post.movie} priority={prioritizeMedia} />
             </div>
           ) : null}
           {post.sound ? (

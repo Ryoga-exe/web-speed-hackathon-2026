@@ -6,6 +6,10 @@ export function getMoviePath(movieId: string): string {
   return `/movies/${movieId}.mp4`;
 }
 
+export function getMoviePosterPath(movieId: string): string {
+  return `/movies/${movieId}.jpg`;
+}
+
 export function getLegacyMoviePath(movieId: string): string {
   return `/movies/${movieId}.gif`;
 }
