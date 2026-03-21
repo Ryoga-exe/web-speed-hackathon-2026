@@ -35,6 +35,21 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const INITIAL_STREAM_DELAY_MS = 75;
+const STREAM_CHUNK_DELAY_MS = 12;
+const STREAM_CHUNK_SIZE = 256;
+
+function chunkResponse(text: string): string[] {
+  const chars = Array.from(text);
+  const chunks: string[] = [];
+
+  for (let i = 0; i < chars.length; i += STREAM_CHUNK_SIZE) {
+    chunks.push(chars.slice(i, i + STREAM_CHUNK_SIZE).join(""));
+  }
+
+  return chunks;
+}
+
 crokRouter.get("/crok", async (req, res) => {
   if (req.session.userId === undefined) {
     throw new httpErrors.Unauthorized();
@@ -46,17 +61,19 @@ crokRouter.get("/crok", async (req, res) => {
   res.flushHeaders();
 
   let messageId = 0;
+  const chunks = chunkResponse(response);
 
-  // TTFT (Time to First Token)
-  await sleep(3000);
+  await sleep(INITIAL_STREAM_DELAY_MS);
 
-  for (const char of response) {
+  for (const chunk of chunks) {
     if (res.closed) break;
 
-    const data = JSON.stringify({ text: char, done: false });
+    const data = JSON.stringify({ text: chunk, done: false });
     res.write(`event: message\nid: ${messageId++}\ndata: ${data}\n\n`);
 
-    await sleep(10);
+    if (messageId < chunks.length) {
+      await sleep(STREAM_CHUNK_DELAY_MS);
+    }
   }
 
   if (!res.closed) {
