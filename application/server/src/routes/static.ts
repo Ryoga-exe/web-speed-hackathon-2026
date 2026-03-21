@@ -15,6 +15,7 @@ import {
 import { createPostPayloadQuery } from "@web-speed-hackathon-2026/server/src/routes/api/post_payloads";
 import { renderAppHtml } from "@web-speed-hackathon-2026/server/src/utils/render_app_html";
 import { renderIndexDocument } from "@web-speed-hackathon-2026/server/src/utils/render_index_document";
+import { renderTermsAppHtml } from "@web-speed-hackathon-2026/server/src/utils/render_terms_app_html";
 import { AppBootstrapData } from "@web-speed-hackathon-2026/client/src/bootstrap";
 
 export const staticRouter = Router();
@@ -103,14 +104,13 @@ function buildHomePreloadTags(posts: Models.Post[]) {
 
 async function buildTermsDocument() {
   return await renderIndexDocument({
-    appHtml: await renderAppHtml({
-      pathname: "/terms",
-    }),
+    appHtml: await renderTermsAppHtml(),
     headTags: createPreloadLink({
       as: "font",
       href: "/fonts/ReiNoAreMincho-Heading-Bold.woff2",
       type: "font/woff2",
     }),
+    scriptLoading: "idle",
     title: "利用規約 - CaX",
   });
 }
